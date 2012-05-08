@@ -131,17 +131,20 @@ class ImageExtractor
   #  loop through all the images and find the ones that have the sufficient bytes to even make them a candidate
   def filter_by_filesize(images, min_bytes, max_bytes)
     found = 0
+    limit = []
     images.map do |image|
       bytes = get_bytes_for_image image
       log "%s bytes - %s" % [bytes, image]
       if found < 20 and (bytes == 0 or bytes > min_bytes) and bytes < max_bytes
         log "filter_by_filesize: Found potential image - size: #{bytes} bytes, src: #{image}"
         found += 1
-        image
+        limit << image 
       else
         nil
       end
-    end.compact
+      break if found == 4
+    end
+    return limit
   end
 
   #  * check the image src against a list of bad image files we know of like buttons, etc...
@@ -179,44 +182,7 @@ class ImageExtractor
   #  * we'll also make sure to try and weed out banner type ad blocks that have big widths and small heights or vice versa
   #  * so if the image is 3rd found in the dom it's sequence score would be 1 / 3 = .33 * diff in area from the first image
   def download_images_and_get_results(images, depthLevel)
-    results = []
-
-    initial_area = 0
-
-    images.slice(0, 30).each_with_index do |image, index|
-      begin
-        width, height = FastImage.size image
-        type = FastImage.type image
-
-        log "For %s, got w:h [%d, %d], type %s" % [image, width, height, type]
-
-        if width < min_width
-          log "#{image} is too small width: #{width}. Skipping."
-          next
-        end
-
-        sequence_score = 1 / (index + 1)
-        area = width * height
-
-        total_score = 0
-        if (initial_area == 0)
-          initial_area = area
-          total_score = 1
-        else
-          # // let's see how many times larger this image is than the inital image
-          area_difference = area / initial_area
-          total_score = sequence_score * area_difference
-        end
-
-        log "#{image} Area is: #{area}, sequence score: #{sequence_score}, total score: #{total_score}"
-
-        results << [image, total_score]
-      rescue
-        log "Error scoring image #{image} - #{$!}"
-      end
-    end
-
-    results.sort {|a, b| b.last <=> a.last }.map(&:first)
+    results = images
   end
 
 end
