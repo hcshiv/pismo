@@ -142,7 +142,7 @@ class ImageExtractor
       else
         nil
       end
-      break if found == 1
+      break if found == 4
     end
     return limit
   end
